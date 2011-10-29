@@ -18,7 +18,7 @@ package org.jannocessor.bootstrap.processor;
 
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.commons.lang.StringUtils;
-import org.jannocessor.domain.executable.JavaMethod;
+import org.jannocessor.model.executable.JavaMethod;
 
 public class DomainProxyGeneratorHelper {
 

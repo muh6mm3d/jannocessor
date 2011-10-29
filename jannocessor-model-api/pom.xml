@@ -36,14 +36,47 @@
 					<artifactId>jannocessor-bootstrap</artifactId>
 				</dependency>
 			</dependencies>
+
 			<build>
 				<plugins>
 					<plugin>
-						<groupId>org.apache.maven.plugins</groupId>
-						<artifactId>maven-compiler-plugin</artifactId>
+						<artifactId>maven-clean-plugin</artifactId>
+						<version>2.4.1</version>
 						<configuration>
-							<generatedSourcesDirectory>${project.parent.basedir}/jannocessor-generated/src-generated/main/java</generatedSourcesDirectory>
+							<filesets>
+								<fileset>
+									<directory>${project.parent.basedir}/jannocessor-generated/src-generated/main/java</directory>
+									<includes>
+										<include>**/*Data.java</include>
+										<include>**/*Proxy.java</include>
+									</includes>
+								</fileset>
+							</filesets>
 						</configuration>
+					</plugin>
+					<plugin>
+						<groupId>org.bsc.maven</groupId>
+						<artifactId>maven-processor-plugin</artifactId>
+						<version>2.0.4</version>
+						<executions>
+							<execution>
+								<id>process</id>
+								<goals>
+									<goal>process</goal>
+								</goals>
+								<phase>compile</phase>
+								<configuration>
+									<options>
+										<templates.path>${project.parent.basedir}/jannocessor-bootstrap/src/main/resources</templates.path>
+										<classes.path>${project.parent.basedir}/jannocessor-bootstrap/${pom.build.outputDirectory}</classes.path>
+									</options>
+									<processors>
+										<processor>org.jannocessor.processor.JannocessorProcessor</processor>
+									</processors>
+									<defaultOutputDirectory>${project.parent.basedir}/jannocessor-generated/src-generated/main/java</defaultOutputDirectory>
+								</configuration>
+							</execution>
+						</executions>
 					</plugin>
 				</plugins>
 			</build>

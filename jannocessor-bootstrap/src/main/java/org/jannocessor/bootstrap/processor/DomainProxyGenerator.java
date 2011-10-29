@@ -19,18 +19,36 @@ package org.jannocessor.bootstrap.processor;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.jannocessor.domain.type.JavaInterface;
-import org.jannocessor.model.CodeProcessor;
-import org.jannocessor.model.ProcessingContext;
+import javax.swing.text.DefaultEditorKit.CopyAction;
 
-public class DomainProxyGenerator implements CodeProcessor {
+import org.apache.commons.beanutils.MethodUtils;
+import org.jannocessor.collection.Power;
+import org.jannocessor.collection.api.PowerList;
+import org.jannocessor.data.JavaClassData;
+import org.jannocessor.data.JavaPackageData;
+import org.jannocessor.model.CodeNode;
+import org.jannocessor.model.bean.structure.JavaPackageBean;
+import org.jannocessor.model.executable.JavaMethod;
+import org.jannocessor.model.structure.JavaClass;
+import org.jannocessor.model.structure.JavaInterface;
+import org.jannocessor.model.structure.JavaPackage;
+import org.jannocessor.model.util.Classes;
+import org.jannocessor.model.util.Fields;
+import org.jannocessor.model.util.Methods;
+import org.jannocessor.model.util.ModelUtils;
+import org.jannocessor.model.util.New;
+import org.jannocessor.model.variable.JavaField;
+import org.jannocessor.processor.context.CodeProcessor;
+import org.jannocessor.processor.context.ProcessingContext;
 
-	@Override
+public class DomainProxyGenerator implements CodeProcessor<JavaInterface> {
+
+	private DomainProxyGeneratorHelper helper = new DomainProxyGeneratorHelper();
+
 	public void process(ProcessingContext context, Map<String, Object> params) {
 		JavaInterface model = (JavaInterface) params.get("model");
 		context.getLogger().debug("Processing annotated domain model: {}",
 				model);
-		DomainProxyGeneratorHelper helper = new DomainProxyGeneratorHelper();
 
 		context.getLogger().debug("Generating model proxies...");
 		generateModelProxies(context, model, helper);
@@ -53,8 +71,8 @@ public class DomainProxyGenerator implements CodeProcessor {
 		attributes.put("className", className);
 		attributes.put("helper", helper);
 
-		context.generateFile(packageName, className + ".java", "model_proxy",
-				attributes);
+		// context.generateFile(packageName, className + ".java", "model_proxy",
+		// attributes);
 	}
 
 	private void generateBaseModel(ProcessingContext context,
@@ -68,8 +86,9 @@ public class DomainProxyGenerator implements CodeProcessor {
 		attributes2.put("className", className2);
 		attributes2.put("helper", helper);
 
-		context.generateFile(packageName2, className2 + ".java", "model_data",
-				attributes2);
+		// context.generateFile(packageName2, className2 + ".java",
+		// "model_data",
+		// attributes2);
 	}
 
 	@SuppressWarnings("unused")
@@ -84,8 +103,63 @@ public class DomainProxyGenerator implements CodeProcessor {
 		attributes3.put("className", className3);
 		attributes3.put("helper", helper);
 
-		context.generateFile(packageName3, className3 + ".java", "model_bean",
-				attributes3);
+		// context.generateFile(packageName3, className3 + ".java",
+		// "model_bean",
+		// attributes3);
+	}
+
+	@Override
+	public void process(PowerList<JavaInterface> api, ProcessingContext context) {
+		for (JavaInterface model : api) {
+			JavaClass bean = createBean(model);
+			JavaClass proxy = createProxy(model);
+
+			context.generateCode(bean, false);
+			context.generateCode(proxy, false);
+		}
+	}
+
+	private JavaClass createBean(JavaInterface model) {
+		JavaClass bean = New.classs(Classes.PUBLIC, model.getName().copy()
+				.appendPart("Data").toString());
+
+		// work-around to set the name
+		((JavaClassData) bean).setPackageName(New.name("org.jannocessor.data"));
+
+		PowerList<JavaMethod> methods = model.getMethods();
+
+		// add fields
+		for (JavaMethod method : methods) {
+			String fieldName = helper.fieldName(method);
+
+			JavaField field = New.field(Fields.PRIVATE, method.getReturnType(),
+					fieldName);
+			bean.getFields().add(field);
+
+			JavaMethod getter = ModelUtils.copy(method);
+			String getterCode = String.format("return this.%s;", fieldName);
+			getter.getBody().setHardcoded(getterCode);
+			bean.getMethods().add(getter);
+
+			JavaMethod setter = ModelUtils.copy(method);
+			setter.getName().replacePart(0, "set");
+			String setterCode = String.format("this.%s = %s;", fieldName, fieldName);
+			getter.getBody().setHardcoded(setterCode);
+			bean.getMethods().add(setter);
+		}
+
+		return bean;
+	}
+
+	private JavaClass createProxy(JavaInterface model) {
+		JavaClass proxy = New.classs(Classes.PUBLIC, model.getName().copy()
+				.appendPart("Proxy").toString());
+
+		// work-around to set the name
+		((JavaClassData) proxy).setPackageName(New
+				.name("org.jannocessor.proxy"));
+
+		return proxy;
 	}
 
 }
